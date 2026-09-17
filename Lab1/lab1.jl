@@ -7,12 +7,12 @@ plotly()
 n = 4
 Random.seed!(42)
 
-A = Float64.(rand(-100:100, n, n)) ./ 100.00
+A = Float64.(rand(-10:10, n, n)) ./ 100.00
 
 # Делаем матрицу диагонально преобладающей
-# for i in 1:n
-#     A[i, i] += n + 1.00
-# end
+for i in 1:n
+    A[i, i] += n + 1.00
+end
 
 b = [
     2.00,
@@ -22,17 +22,17 @@ b = [
 ]
 
 delta_A = [
-    0.01  0.00  0.00  0.00;
-    0.00  0.01  0.00  0.00;
-    0.00  0.00  0.01  0.00;
-    0.00  0.00  0.00  0.01
+    0.08  0.02  0.00  0.01;
+    0.01  0.06  0.02  0.00;
+    0.00  0.01  0.07  0.02;
+    0.02  0.00  0.01  0.05
 ]
 
 delta_b = [
-    0.01,
-    -0.01,
-    0.02,
-    -0.02
+    0.15,
+    -0.10,
+    0.20,
+    -0.15
 ]
 
 # РЕШЕНИЕ СЛАУ
@@ -88,30 +88,30 @@ function printAnalysis(A, b, delta_A, delta_b, p)
 
     println()
     println("Решение системы x")
-    println(round.(x, digits = 6))
+    println(round.(x, digits = 2))
     println()
     println("Решение системы x~")
-    println(round.(xNew, digits = 6))
+    println(round.(xNew, digits = 2))
     println()
     println("delta_x = x~ - x")
-    println(round.(delta_x, digits = 6))
+    println(round.(delta_x, digits = 2))
     println()
     println("nu(A)")
-    println(round(nu, digits = 6))
+    println(round(nu, digits = 2))
     println()
     println("||delta_b||p / ||b||p")
-    println(round(rel_b, digits = 6))
+    println(round(rel_b, digits = 2))
     println()
     println("||delta_A||p / ||A||p")
-    println(round(rel_A, digits = 6))
+    println(round(rel_A, digits = 2))
     println()
     println("Прямая относительная ошибка")
-    println(round(errDirect * 100.00, digits = 6)," %")
+    println(round(errDirect * 100.00, digits = 2)," %")
     println()
     println("Теоретическая оценка")
-    println(round(errEstimate * 100.00, digits = 6)," %")
+    println(round(errEstimate * 100.00, digits = 2)," %")
     println()
-    println("Прямая ошибка <= оценка: ", errDirect <= errEstimate)
+    println("Прямая ошибка <= Теоретическая оценка: ", errDirect <= errEstimate)
 end
 
 # СОЗДАНИЕ ДАННЫХ ДЛЯ 3D-ГРАФИКА
@@ -150,8 +150,8 @@ function buildSurfaces(A, b, delta_A, delta_b, p)
             xNew = solveSystem(A + cur_A,b + cur_b)
             delta_x = xNew - x
 
-            directSurf[i, j] = (norm(delta_x, p) / norm(x, p)) * 100.00
-            estimateSurf[i, j] = nu * (norm(cur_b, p) / norm(b, p) + opnorm(cur_A, p) / opnorm(A, p)) * 100.00
+            directSurf[i, j] = round((norm(delta_x, p) / norm(x, p)) * 100.00, digits = 2)
+            estimateSurf[i, j] = round(nu * (norm(cur_b, p) / norm(b, p) + opnorm(cur_A, p) / opnorm(A, p)) * 100.00, digits = 2)
         end
     end
 
@@ -204,15 +204,15 @@ display(round.(A, digits = 2))
 
 println()
 println("Вектор b")
-println(b)
+println(round.(b, digits = 2))
 
 println()
 println("Матрица delta_A")
-display(delta_A)
+display(round.(delta_A, digits = 2))
 
 println()
 println("Вектор delta_b")
-println(delta_b)
+println(round.(delta_b, digits = 2))
 
 # РАСЧЕТ ДЛЯ p = 2
 printAnalysis(A, b, delta_A, delta_b, 2)
