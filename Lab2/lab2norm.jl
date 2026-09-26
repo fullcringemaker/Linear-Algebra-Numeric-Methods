@@ -3,20 +3,17 @@ using Random
 using Plots
 using Printf
 
-n = 100
+n = 1000
 k = 0.01
 ratio_interval = (0.01, 2.0)
-points = 80
+points = 50
 
 function make_matrix(n, ratio)
-    Random.seed!(1234)
     A = rand(1.0:100.0, n, n)
-
     for i in 1:n
         S = sum(abs, A[i, :]) - abs(A[i, i])
         A[i, i] = round(ratio * S, digits=2)
     end
-
     return A
 end
 
@@ -34,14 +31,11 @@ function gauss(A0, b0)
 
     for step in 1:n-1
         A[step, step] == 0 && error("Нулевой ведущий элемент на шаге $step")
-
         for i in step+1:n
             m = A[i, step] / A[step, step]
-
             for j in step:n
                 A[i, j] -= m * A[step, j]
             end
-
             b[i] -= m * b[step]
         end
     end
@@ -52,11 +46,9 @@ function gauss(A0, b0)
 
     for i in n:-1:1
         s = 0.0
-
         for j in i+1:n
             s += A[i, j] * x[j]
         end
-
         x[i] = (b[i] - s) / A[i, i]
     end
 
@@ -69,7 +61,25 @@ end
 
 function vector_string(x, digits)
     format = Printf.Format("%.$(digits)f")
-    return "[" * join((Printf.format(format, value) for value in x), ", ") * "]"
+    count = min(5, length(x))
+    values = join(
+        (Printf.format(format, x[i]) for i in 1:count),
+        ", "
+    )
+
+    if length(x) > count
+        return "[" * values * "] …"
+    else
+        return "[" * values * "]"
+    end
+end
+
+function y_axis(errors)
+    min_power = floor(Int, log10(minimum(errors)))
+    max_power = ceil(Int, log10(maximum(errors)))
+    ticks = 10.0 .^ (min_power:max_power)
+
+    return ticks, (first(ticks), last(ticks))
 end
 
 A = make_matrix(n, k)
@@ -144,17 +154,26 @@ for ratio in ratios
     push!(lapack_errors, lapack_error)
 end
 
+yticks_r, ylims_r = y_axis(gauss_errors)
+yticks_b, ylims_b = y_axis(lapack_errors)
+
 p1 = plot(
     ratios,
     gauss_errors,
     xlabel="|a_ii| / Σ|a_ij|",
     ylabel="||delx_r||/||x_r||, %",
     title="Метод Гаусса",
+    xlims=(0, 2),
+    xticks=0:0.2:2,
+    ylims=ylims_r,
+    yticks=yticks_r,
     yscale=:log10,
     linewidth=2,
     marker=:circle,
     legend=false
 )
+
+display(p1)
 
 p2 = plot(
     ratios,
@@ -162,17 +181,14 @@ p2 = plot(
     xlabel="|a_ii| / Σ|a_ij|",
     ylabel="||delx_b||/||x_b||, %",
     title="Библиотека LAPACK",
+    xlims=(0, 2),
+    xticks=0:0.2:2,
+    ylims=ylims_b,
+    yticks=yticks_b,
     yscale=:log10,
     linewidth=2,
     marker=:circle,
     legend=false
 )
 
-all_plots = plot(
-    p1,
-    p2,
-    layout=(2, 1),
-    size=(1000, 1000)
-)
-
-display(all_plots)
+display(p2)
