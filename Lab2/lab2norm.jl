@@ -66,7 +66,6 @@ function vector_string(x, digits)
         (Printf.format(format, x[i]) for i in 1:count),
         ", "
     )
-
     if length(x) > count
         return "[" * values * "] …"
     else
