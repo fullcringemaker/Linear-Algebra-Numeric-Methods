@@ -3,10 +3,12 @@ using Random
 using Plots
 using Printf
 
+# plotly()
+
 n = 100
 k = 0.01
 ratio_interval = (0.01, 2.0)
-points = 80
+points = 50
 
 function make_matrix(n, ratio)
     Random.seed!(1234)
@@ -29,9 +31,7 @@ function gauss(A0, b0)
     A = copy(A0)
     b = copy(b0)
     n = length(b)
-
     for step in 1:n-1
-        A[step, step] == 0 && error("Нулевой ведущий элемент на шаге $step")
         for i in step+1:n
             m = A[i, step] / A[step, step]
             for j in step:n
@@ -40,9 +40,7 @@ function gauss(A0, b0)
             b[i] -= m * b[step]
         end
     end
-
-    A[n, n] == 0 && error("Нулевой ведущий элемент")
-
+    
     x = zeros(n)
     for i in n:-1:1
         s = 0.0
@@ -51,7 +49,13 @@ function gauss(A0, b0)
         end
         x[i] = (b[i] - s) / A[i, i]
     end
+    return x
+end
 
+function lapack_solve(A, b)
+    Acopy = copy(A)
+    bcopy = copy(b)
+    x, factors, pivots = LAPACK.gesv!(Acopy, bcopy)
     return x
 end
 
@@ -61,7 +65,16 @@ end
 
 function vector_string(x, digits)
     format = Printf.Format("%.$(digits)f")
-    return "[" * join((Printf.format(format, value) for value in x), ", ") * "]"
+    count = min(5, length(x))
+    values = join(
+        (Printf.format(format, x[i]) for i in 1:count),
+        ", "
+    )
+    if length(x) > count
+        return "[" * values * "] …"
+    else
+        return "[" * values * "]"
+    end
 end
 
 A = make_matrix(n, k)
@@ -71,10 +84,7 @@ b = A * x_t
 @printf("n = %d\n", n)
 @printf("k = %.2f\n", k)
 
-println(
-    "Диагональное преобладание: ",
-    has_diagonal_dominance(A) ? "есть" : "нет"
-)
+println("Диагональное преобладание: ", has_diagonal_dominance(A))
 
 println()
 println("Точное решение")
@@ -90,24 +100,23 @@ println()
 println("Метод Гаусса")
 println("x_r = ", vector_string(x_r, 15))
 
-println()
-@printf(
-    "Относительная ошибка метода Гаусса = %.10e %%\n",
-    error_r
-)
+@printf("Относительная ошибка метода Гаусса = %.10e %%\n", error_r)
 
-x_b = A \ b
+x_b = lapack_solve(A, b)
 error_b = relative_error(x_b, x_t)
 
 println()
 println("Библиотека LAPACK")
 println("x_b = ", vector_string(x_b, 15))
 
-println()
-@printf(
-    "Относительная ошибка библиотеки LAPACK = %.10e %%\n",
-    error_b
-)
+@printf("Относительная ошибка библиотеки LAPACK = %.10e %%\n",error_b)
+
+function y_axis(errors)
+    min_power = floor(Int, log10(minimum(errors)))
+    max_power = ceil(Int, log10(maximum(errors)))
+    ticks = 10.0 .^ (min_power:max_power)
+    return ticks, (first(ticks), last(ticks))
+end
 
 ratios = range(
     ratio_interval[1],
@@ -115,73 +124,61 @@ ratios = range(
     length=points
 )
 
-error_r_graph = zeros(length(ratios))
-error_b_graph = zeros(length(ratios))
+gauss_errors = Float64[]
+lapack_errors = Float64[]
 
-for i in eachindex(ratios)
-    A_current = make_matrix(n, ratios[i])
-    x_t_current = ones(n)
-    b_current = A_current * x_t_current
+for ratio in ratios
+    A_current = make_matrix(n, ratio)
+    b_current = A_current * x_t
 
     x_r_current = gauss(A_current, b_current)
-    x_b_current = A_current \ b_current
+    x_b_current = lapack_solve(A_current, b_current)
 
-    error_r_graph[i] = relative_error(x_r_current, x_t_current)
-    error_b_graph[i] = relative_error(x_b_current, x_t_current)
+    gauss_error = relative_error(x_r_current, x_t)
+    lapack_error = relative_error(x_b_current, x_t)
+
+    gauss_error = max(gauss_error, eps(Float64))
+    lapack_error = max(lapack_error, eps(Float64))
+
+    push!(gauss_errors, gauss_error)
+    push!(lapack_errors, lapack_error)
 end
 
-min_power_r = floor(Int, log10(minimum(error_r_graph)))
-max_power_r = ceil(Int, log10(maximum(error_r_graph)))
-yticks_r = 10.0 .^ (min_power_r:max_power_r)
+yticks_r, ylims_r = y_axis(gauss_errors)
+yticks_b, ylims_b = y_axis(lapack_errors)
 
 p1 = plot(
     ratios,
-    error_r_graph,
-    xlabel="|a_ii| / Σ|a_ij|",
+    gauss_errors,
+    xlabel="|a_ii| / sum|a_ij|",
     ylabel="||delx_r||/||x_r||, %",
     title="Метод Гаусса",
     xlims=(0, 2),
     xticks=0:0.2:2,
-    ylims=(10.0^min_power_r, 10.0^max_power_r),
+    ylims=ylims_r,
     yticks=yticks_r,
     yscale=:log10,
     linewidth=2,
     marker=:circle,
-    markersize=3,
-    legend=false,
-    grid=true,
-    guidefontsize=11,
-    tickfontsize=9,
-    left_margin=18Plots.PlotMeasures.mm,
-    size=(1000, 650)
+    legend=false
 )
 
 display(p1)
 
-min_power_b = floor(Int, log10(minimum(error_b_graph)))
-max_power_b = ceil(Int, log10(maximum(error_b_graph)))
-yticks_b = 10.0 .^ (min_power_b:max_power_b)
-
 p2 = plot(
     ratios,
-    error_b_graph,
-    xlabel="|a_ii| / Σ|a_ij|",
+    lapack_errors,
+    xlabel="|a_ii| / sum|a_ij|",
     ylabel="||delx_b||/||x_b||, %",
     title="Библиотека LAPACK",
     xlims=(0, 2),
     xticks=0:0.2:2,
-    ylims=(10.0^min_power_b, 10.0^max_power_b),
+    ylims=ylims_b,
     yticks=yticks_b,
     yscale=:log10,
     linewidth=2,
     marker=:circle,
-    markersize=3,
-    legend=false,
-    grid=true,
-    guidefontsize=11,
-    tickfontsize=9,
-    left_margin=18Plots.PlotMeasures.mm,
-    size=(1000, 650)
+    legend=false
 )
 
 display(p2)
