@@ -1,7 +1,7 @@
 using LinearAlgebra
 using Random
 
-n = 5
+n = 100
 eps = 1e-6
 max_iter = 10000
 
@@ -23,13 +23,26 @@ function simple_iteration(A, b, eps, max_iter)
     g = zeros(n)
     for i in 1:n
         g[i] = b[i] / A[i, i]
-
         for j in 1:n
             if i != j
                 P[i, j] = -A[i, j] / A[i, i]
             end
         end
     end
+
+    # println("Матрица P:")
+    # display(P)
+    
+    P_norm = opnorm(P, Inf)
+    if P_norm < 1
+        println("Норма P = ", P_norm)
+    else
+        println("Норма P = ", P_norm)
+    end
+    
+    # println("Вектор g:")
+    # display(g)
+    
     x_prev = zeros(n)
     for k in 1:max_iter
         x = P * x_prev + g
@@ -48,4 +61,9 @@ x, iterations, err = simple_iteration(A, b, eps, max_iter)
 
 println("Количество итераций: ", iterations)
 println("x = ", x)
-println("Ошибка: ", err)
+println("delta_x^(k): ", err)
+
+x_check = A \ b
+println("Решение из Ax=b: ", x_check)
+println("Разница: ", x - x_check)
+println("Разница: ", norm(x - x_check))
