@@ -1,20 +1,20 @@
 using LinearAlgebra
 using Random
 
+Random.seed!(42)
+
 n = 100
+k = 3
 eps = 1e-6
 max_iter = 10000
 
-Random.seed!(42)
-
-function generate_system(n)
-    A = Float64.(rand(-10:10, n, n))
+function generate_system(n, k)
+    A = rand(1.0:100.0, n, n)
     for i in 1:n
-        s = sum(abs.(A[i, :])) - abs(A[i, i])
-        A[i, i] = s + rand(1:10)
+        S = sum(abs, A[i, :]) - abs(A[i, i])
+        A[i, i] = round(k * S, digits=2)
     end
-    b = Float64.(rand(-10:10, n))
-    return A, b
+    return A
 end
 
 function simple_iteration(A, b, eps, max_iter)
@@ -30,40 +30,37 @@ function simple_iteration(A, b, eps, max_iter)
         end
     end
 
-    # println("Матрица P:")
-    # display(P)
-    
     P_norm = opnorm(P, Inf)
+    println("Норма P = ", P_norm)
+
     if P_norm < 1
-        println("Норма P = ", P_norm)
+        println("Условие сходимости ||P|| < 1 выполнено")
     else
-        println("Норма P = ", P_norm)
+        println("Условие сходимости ||P|| < 1 не выполнено")
     end
-    
-    # println("Вектор g:")
-    # display(g)
-    
+
     x_prev = zeros(n)
-    for k in 1:max_iter
+
+    for iteration in 1:max_iter
         x = P * x_prev + g
         delta_x = x - x_prev
-        error = norm(delta_x)
-        if error <= eps
-            return x, k, error
+        err = norm(delta_x)
+        if err <= eps
+            return x, iteration, err
         end
         x_prev = x
     end
     error("Метод не сошелся за $max_iter итераций")
 end
 
-A, b = generate_system(n)
+A = generate_system(n, k)
+x_exact = ones(n)
+b = A * x_exact
 x, iterations, err = simple_iteration(A, b, eps, max_iter)
 
+println("k = ", k)
 println("Количество итераций: ", iterations)
-println("x = ", x)
+println("Полученный x: ", x)
 println("delta_x^(k): ", err)
 
-x_check = A \ b
-println("Решение из Ax=b: ", x_check)
-println("Разница: ", x - x_check)
-println("Разница: ", norm(x - x_check))
+println("Норма разницы: ", norm(x - x_exact))
