@@ -4,15 +4,15 @@ using Random
 Random.seed!(42)
 
 n = 100
-k = 3
+ratio = 3
 eps = 1e-6
 max_iter = 10000
 
-function generate_system(n, k)
-    A = rand(1.0:100.0, n, n)
+function generate_system(n, ratio)
+    A = rand(-10.0:100.0, n, n)
     for i in 1:n
         S = sum(abs, A[i, :]) - abs(A[i, i])
-        A[i, i] = round(k * S, digits=2)
+        A[i, i] = round(ratio * S, digits=2)
     end
     return A
 end
@@ -37,24 +37,24 @@ function simple_iteration(A, b, eps, max_iter)
         println("Условие сходимости ||P|| < 1 не выполнено")
     end
     x_prev = zeros(n)
-    for iteration in 1:max_iter
+    for k in 1:max_iter
         x = P * x_prev + g
         delta_x = x - x_prev
         err = norm(delta_x)
         if err <= eps
-            return x, iteration, err
+            return x, k, err
         end
         x_prev = x
     end
     error("Метод не сошелся за $max_iter итераций")
 end
 
-A = generate_system(n, k)
+A = generate_system(n, ratio)
 x_exact = ones(n)
 b = A * x_exact
 x, iterations, err = simple_iteration(A, b, eps, max_iter)
 
-println("k = ", k)
+println("КДП = ", ratio)
 println("Количество итераций: ", iterations)
 println("Полученный x: ", x)
 println("delta_x^(k): ", err)
@@ -63,7 +63,7 @@ println("Норма разницы: ", norm(x - x_exact))
 function seidel(A, b, eps, max_iter)
     n = length(b)
     x_prev = zeros(n)
-    for iteration in 1:max_iter
+    for k in 1:max_iter
         x = copy(x_prev)
         for i in 1:n
             sum1 = 0.0
@@ -79,7 +79,7 @@ function seidel(A, b, eps, max_iter)
         delta_x = x - x_prev
         err = norm(delta_x)
         if err <= eps
-            return x, iteration, err
+            return x, k, err
         end
         x_prev = x
     end
@@ -88,10 +88,8 @@ end
 
 x_seidel, iterations_seidel, err_seidel = seidel(A, b, eps, max_iter)
 
-println("k = ", k)
+println("КДП = ", ratio)
 println("Количество итераций: ", iterations_seidel)
 println("Полученный x: ", x_seidel)
 println("delta_x^(k): ", err_seidel)
 println("Норма разницы: ", norm(x_seidel - x_exact))
-
-
