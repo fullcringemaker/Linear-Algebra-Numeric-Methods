@@ -65,16 +65,11 @@ end
 
 function vector_string(x, digits)
     format = Printf.Format("%.$(digits)f")
-    count = min(5, length(x))
     values = join(
-        (Printf.format(format, x[i]) for i in 1:count),
+        (Printf.format(format, value) for value in x),
         ", "
     )
-    if length(x) > count
-        return "[" * values * "] …"
-    else
-        return "[" * values * "]"
-    end
+    return "[" * values * "]"
 end
 
 A = make_matrix(n, k)
