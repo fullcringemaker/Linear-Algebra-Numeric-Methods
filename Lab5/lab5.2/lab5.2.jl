@@ -159,7 +159,7 @@ for i in 1:length(intervals)
     println("Количество итераций: ", count)
 end
 
-tau = 0.005
+tau = 0.01
 
 function relaxation(x0, tau)
     history = [x0]
@@ -180,7 +180,6 @@ r_iterations = Int[]
 r_histories = Vector{Float64}[]
 
 println("\nМетод релаксаций:")
-
 for i in 1:n
     a, b = intervals[i]
     x0 = (a + b)/2
