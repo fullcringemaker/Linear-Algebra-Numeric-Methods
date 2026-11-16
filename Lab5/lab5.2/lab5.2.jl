@@ -70,6 +70,8 @@ println("\nХарактеристический многочлен:")
 println(poly)
 
 f(x) = poly(x)
+dpoly = derivative(poly)
+df(x) = dpoly(x)
 
 lambda_lib = sort(real.(roots(poly)))
 
