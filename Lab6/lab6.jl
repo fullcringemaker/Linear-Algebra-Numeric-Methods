@@ -134,7 +134,7 @@ scatter!(
     label="Минимум q0"
 )
 
- plot(
+plot(
     tau_values,
     iteration_counts,
     marker=:circle,
